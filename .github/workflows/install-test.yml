@@ -1,6 +1,7 @@
-# Installs a published release with this repo's install.sh / install.ps1 (what users fetch from main)
-# on Windows, Linux and macOS, then runs gdsh in a scratch project. Runs after a tag's release
-# workflow succeeds: a release created with the workflow token can't trigger `release: published`.
+# Installs a published gdsh release with this repo's install.sh / install.ps1 (what users fetch from
+# main) on Windows, Linux and macOS, then runs it against a real Godot in a scratch project. The unit
+# tests use a fake Godot and skip Windows; this covers both. Runs after a tag's release workflow
+# succeeds: a release created with the workflow token can't trigger `release: published`.
 name: install-test
 on:
   workflow_run:
