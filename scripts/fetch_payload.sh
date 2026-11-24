@@ -5,6 +5,11 @@
 #   scripts/fetch_payload.sh             # latest release of brohd11/godot-gdsh-lib-cli
 #   scripts/fetch_payload.sh v0.2.0      # that tag
 #   scripts/fetch_payload.sh --zip FILE  # a local export zip (development only)
+#   scripts/fetch_payload.sh --check [TAG]  # only compare versions: exit 1 if the vendored
+#                                           # payload is not the latest release (or TAG)
+#
+# The fetch rewrites every .uid file; restore them by hand before committing. --check
+# downloads nothing and writes nothing, so CI can run it.
 #
 # Needs curl, jq and unzip. GITHUB_TOKEN (or GH_TOKEN) raises the API rate limit.
 set -eu
@@ -15,6 +20,13 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DEST="$ROOT/payload/cli"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/gdsh-payload.XXXXXX")
 trap 'rm -rf "$TMP"' EXIT
+
+check=0
+if [ "${1:-}" = "--check" ]; then
+	check=1
+	shift
+	[ "${1:-}" != "--zip" ] || { echo "usage: $0 --check [TAG]" >&2; exit 2; }
+fi
 
 if [ "${1:-}" = "--zip" ]; then
 	[ -n "${2:-}" ] || { echo "usage: $0 --zip FILE" >&2; exit 2; }
@@ -33,6 +45,15 @@ else
 		curl -fsSL "$api" > "$TMP/release.json"
 	fi
 	tag=$(jq -r '.tag_name' "$TMP/release.json")
+	if [ "$check" = 1 ]; then
+		have=$(sed -n 's/^version="\(.*\)"/\1/p' "$DEST/package.cfg")
+		if [ "v$have" = "$tag" ]; then
+			echo "payload/cli is up to date ($tag)"
+			exit 0
+		fi
+		echo "payload/cli is v$have but $REPO is at $tag -- run scripts/fetch_payload.sh, restore the .uid files, commit" >&2
+		exit 1
+	fi
 	url=$(jq -r '[.assets[] | select(.name | endswith(".zip"))][0].browser_download_url // empty' "$TMP/release.json")
 	[ -n "$url" ] || { echo "error: release $tag of $REPO has no zip asset" >&2; exit 1; }
 	zip="$TMP/payload.zip"
