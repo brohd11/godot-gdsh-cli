@@ -20,11 +20,11 @@ runs a line. See `gdsh --help`.
 ## Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/brohd11/gdsh/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/brohd11/godot-gdsh-cli/main/install.sh | sh
 ```
 
 ```powershell
-irm https://raw.githubusercontent.com/brohd11/gdsh/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/brohd11/godot-gdsh-cli/main/install.ps1 | iex
 ```
 
 The installer puts `gdsh` in `~/.local/bin` (Windows: `%LOCALAPPDATA%\bin`) and registers the Godot
@@ -38,7 +38,7 @@ binaries it finds. `gdsh register <path to godot>` adds others, and `gdsh self-u
   `config/features`, preferring mono when the project uses C#. It never falls back to another version,
   which would re-import the project's `.godot/`.
 - `gdsh register` records each binary under the version `godot --version` reports.
-- The GDScript half ([godot-gdsh-cli](https://github.com/brohd11/godot-gdsh-cli)) is embedded in the
+- The GDScript half ([godot-gdsh-lib-cli](https://github.com/brohd11/godot-gdsh-lib-cli)) is embedded in the
   binary and unpacked to `~/.gdsh/cli` whenever it differs. Godot runs `boot.gd` from there, using the
   project's own gdsh when it has one.
 

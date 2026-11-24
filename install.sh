@@ -1,7 +1,7 @@
 #!/bin/sh
 # Install gdsh into ~/.local/bin.
 #
-#   curl -fsSL https://raw.githubusercontent.com/brohd11/gdsh/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/brohd11/godot-gdsh-cli/main/install.sh | sh
 #
 # Env overrides:
 #   BIN_DIR=/usr/local/bin   install target   (default: ~/.local/bin)
@@ -14,7 +14,7 @@
 set -eu
 
 # ---- config ----
-REPO="brohd11/gdsh"
+REPO="brohd11/godot-gdsh-cli"
 BINARY="gdsh"
 ARCHIVE_EXT="zip"
 SUPPORTED="darwin-arm64 darwin-amd64 linux-amd64 linux-arm64"

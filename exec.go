@@ -10,8 +10,8 @@ import (
 	"os/signal"
 	"path/filepath"
 
-	"github.com/brohd11/gdsh/gdshcmd"
-	"github.com/brohd11/gdsh/payload"
+	"github.com/brohd11/godot-gdsh-cli/gdshcmd"
+	"github.com/brohd11/godot-gdsh-cli/payload"
 )
 
 func runFile(path string, stdout, stderr io.Writer) int {

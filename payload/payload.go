@@ -1,6 +1,6 @@
 // Package payload carries the GDScript half of the gdsh CLI (boot.gd, src/run.gd and the gdsh
 // copy vendored beside them) and unpacks it to <gdsh home>/cli, where Godot runs it. It is the
-// release export of github.com/brohd11/godot-gdsh-cli, vendored by scripts/fetch_payload.sh
+// release export of github.com/brohd11/godot-gdsh-lib-cli, vendored by scripts/fetch_payload.sh
 // (`go generate`) and committed. Only the gdsh binary imports it, so mcp_sh_godot stays lean.
 package payload
 

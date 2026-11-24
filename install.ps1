@@ -1,6 +1,6 @@
 # Install gdsh into %LOCALAPPDATA%\bin.
 #
-#   irm https://raw.githubusercontent.com/brohd11/gdsh/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/brohd11/godot-gdsh-cli/main/install.ps1 | iex
 #
 # Env overrides (set them before the pipeline):
 #   $env:BIN_DIR = 'C:\tools'    install target   (default: %LOCALAPPDATA%\bin)
@@ -13,7 +13,7 @@
 # Update the template, then run the workspace's render-go.sh.
 
 # ---- config ----
-$Repo       = 'brohd11/gdsh'
+$Repo       = 'brohd11/godot-gdsh-cli'
 $Binary     = 'gdsh'
 $ArchiveExt = 'zip'                                # zip | tar.gz
 $Supported  = 'windows-amd64'

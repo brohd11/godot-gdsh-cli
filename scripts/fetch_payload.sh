@@ -2,14 +2,14 @@
 # Vendor the gdsh-cli release export into payload/cli, which go:embed carries and gdsh unpacks
 # into ~/.gdsh/cli. Commit the result.
 #
-#   scripts/fetch_payload.sh             # latest release of brohd11/godot-gdsh-cli
+#   scripts/fetch_payload.sh             # latest release of brohd11/godot-gdsh-lib-cli
 #   scripts/fetch_payload.sh v0.2.0      # that tag
 #   scripts/fetch_payload.sh --zip FILE  # a local export zip (development only)
 #
 # Needs curl, jq and unzip. GITHUB_TOKEN (or GH_TOKEN) raises the API rate limit.
 set -eu
 
-REPO="brohd11/godot-gdsh-cli"
+REPO="brohd11/godot-gdsh-lib-cli"
 PKG="addons/_lib/gdsh_lib/cli"
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DEST="$ROOT/payload/cli"

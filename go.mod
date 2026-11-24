@@ -1,4 +1,4 @@
-module github.com/brohd11/gdsh
+module github.com/brohd11/godot-gdsh-cli
 
 go 1.26.4
 

@@ -11,15 +11,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/brohd11/gdsh/gdshcmd"
-	"github.com/brohd11/gdsh/payload"
+	"github.com/brohd11/godot-gdsh-cli/gdshcmd"
+	"github.com/brohd11/godot-gdsh-cli/payload"
 	"github.com/brohd11/goutil/selfupdate"
 )
 
 // version is set at build time via -ldflags "-X main.version=...". See the makefile.
 var version = "dev"
 
-const updateRepo = "brohd11/gdsh"
+const updateRepo = "brohd11/godot-gdsh-cli"
 
 const usage = `Usage: gdsh '<line>' | gdsh -c '<line>' | gdsh -f <file.gdsh> | gdsh <command> ... (gdsh --help)`
 

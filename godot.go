@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/brohd11/gdsh/gdshcmd"
+	"github.com/brohd11/godot-gdsh-cli/gdshcmd"
 )
 
 // Godot binaries are recorded one per line as `godot-<maj>.<min>.<patch>[-mono]: <exe>`.
