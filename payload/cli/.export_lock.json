@@ -1,0 +1,58 @@
+{
+	"deps": [
+		{
+			"asset": "",
+			"kind": "source",
+			"package": "",
+			"path": "res://addons/_lib/gdsh",
+			"repo_id": "github.com/brohd11/godot-gdsh",
+			"sha": "2cf8ba3f4d420d0298d05c3e77754d389116a948",
+			"source": "remote",
+			"tag": "v0.5.1",
+			"url": "https://github.com/brohd11/godot-gdsh",
+			"verify": false
+		},
+		{
+			"asset": "",
+			"kind": "source",
+			"package": "",
+			"path": "res://addons/_lib/gdsh_lib/utils",
+			"repo_id": "github.com/brohd11/godot-gdsh-lib-utils",
+			"sha": "ab9f2b316f7e2f9746a8a6fa651789d14bd875a3",
+			"source": "remote",
+			"tag": "v0.4.1",
+			"url": "https://github.com/brohd11/godot-gdsh-lib-utils",
+			"verify": false
+		},
+		{
+			"asset": "",
+			"kind": "source",
+			"package": "",
+			"path": "res://addons/_lib/util_r",
+			"repo_id": "github.com/brohd11/godot-util-r",
+			"sha": "54220c44a302ddfd09d3aa847f9978dca6132b9a",
+			"source": "remote",
+			"tag": "v0.4.3",
+			"url": "https://github.com/brohd11/godot-util-r",
+			"verify": false
+		}
+	],
+	"godot": "4.6.3-stable (official)",
+	"target": {
+		"asset": "",
+		"kind": "source",
+		"package": "",
+		"path": "res://addons/_lib/gdsh_lib/cli",
+		"repo_id": "github.com/brohd11/godot-gdsh-cli",
+		"sha": "c4345350802e858785c2bc3c2412209bbb03577c",
+		"source": "remote",
+		"tag": "v0.1.1",
+		"url": "https://github.com/brohd11/godot-gdsh-cli",
+		"verify": false
+	},
+	"toolchain": {
+		"id": "631b5527ff0e08fc01cae08612bad507949daf3fb09e5aff6aafa0c6cf0ae13f",
+		"source": "remote",
+		"version": "0.13.2"
+	}
+}
