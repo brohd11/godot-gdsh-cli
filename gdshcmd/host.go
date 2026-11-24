@@ -32,12 +32,14 @@ type Host struct {
 	Client   *gdshpkg.Client // nil: the published index
 }
 
-// Verb is one subcommand. Names share one help entry ("add", "remove").
+// Verb is one subcommand. Names share one help entry ("add", "remove"). A verb with Subs is a
+// group ("package install"): it dispatches on its first argument and has no Run of its own.
 type Verb struct {
 	Names []string
 	Usage []string // one line per form, typed after Prog
 	Help  string   // indented description; "{prog}" is replaced
 	Run   func(name string, args []string, stdout io.Writer) error
+	Subs  []Verb
 }
 
 // UsageError makes Run print the help and exit 2.
@@ -57,7 +59,7 @@ func (h *Host) Run(args []string, stdout, stderr io.Writer) int {
 	}
 	var err error = UsageError(fmt.Sprintf("unknown command %q", args[0]))
 	if v, ok := h.Find(args[0]); ok {
-		err = v.Run(args[0], args[1:], stdout)
+		err = h.runVerb(v, args[0], args[1:], stdout)
 	}
 	var ue UsageError
 	if errors.As(err, &ue) {
@@ -99,12 +101,40 @@ func (h *Host) Help() string {
 func (h *Host) VerbHelp() string {
 	var b strings.Builder
 	for _, v := range h.Verbs() {
-		for _, u := range v.Usage {
-			fmt.Fprintf(&b, "  %s %s\n", h.Prog, u)
-		}
-		b.WriteString(strings.ReplaceAll(v.Help, "{prog}", h.Prog))
+		h.writeHelp(&b, h.Prog, v)
 	}
 	return b.String()
+}
+
+// writeHelp writes v's forms after prefix, or for a group each sub's after "prefix group".
+func (h *Host) writeHelp(b *strings.Builder, prefix string, v Verb) {
+	for _, u := range v.Usage {
+		fmt.Fprintf(b, "  %s %s\n", prefix, u)
+	}
+	b.WriteString(strings.ReplaceAll(v.Help, "{prog}", h.Prog))
+	for _, s := range v.Subs {
+		h.writeHelp(b, prefix+" "+v.Names[0], s)
+	}
+}
+
+// runVerb runs v, or for a group the sub named by args[0]; a bare group prints its help.
+func (h *Host) runVerb(v Verb, name string, args []string, stdout io.Writer) error {
+	if len(v.Subs) == 0 {
+		return v.Run(name, args, stdout)
+	}
+	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" || args[0] == "help" {
+		var b strings.Builder
+		b.WriteString("usage:\n")
+		h.writeHelp(&b, h.Prog, v)
+		fmt.Fprint(stdout, b.String())
+		return nil
+	}
+	for _, s := range v.Subs {
+		if slices.Contains(s.Names, args[0]) {
+			return h.runVerb(s, args[0], args[1:], stdout)
+		}
+	}
+	return UsageError(fmt.Sprintf("unknown %s command %q", name, args[0]))
 }
 
 func (h *Host) client() *gdshpkg.Client {
@@ -140,23 +170,25 @@ func (h *Host) shared() []Verb {
       there is none. It goes in the user root's commands/ folder, or this project's
       (--project), or any folder (--dir). --force replaces the command.
 `, Run: func(_ string, args []string, stdout io.Writer) error { return h.cmdNew(args, stdout) }},
-		{Names: []string{"search"}, Usage: []string{"search [TERM] [--refresh]"},
-			Help: `      List the reviewed command packages (godot-gdsh-lib-manifest), with what they need and
+		{Names: []string{"package"}, Subs: []Verb{
+			{Names: []string{"search"}, Usage: []string{"search [TERM] [--refresh]"},
+				Help: `      List the reviewed command packages (godot-gdsh-lib-manifest), with what they need and
       whether they are installed.
 `, Run: h.packages},
-		{Names: []string{"install"}, Usage: []string{"install NAME... [--project | --dir ROOT] [--force] [--refresh]"},
-			Help: `      Install packages and the packages they need into the root's packages/ folder, at the
+			{Names: []string{"install"}, Usage: []string{"install NAME... [--project | --dir ROOT] [--force] [--refresh]"},
+				Help: `      Install packages and the packages they need into the root's packages/ folder, at the
       versions the index pins. --force reinstalls current ones.
 `, Run: h.packages},
-		{Names: []string{"packages"}, Usage: []string{"packages [--project | --dir ROOT]"},
-			Help: `      List installed packages, and newer pinned versions.
+			{Names: []string{"list"}, Usage: []string{"list [--project | --dir ROOT]"},
+				Help: `      List installed packages, and newer pinned versions.
 `, Run: h.packages},
-		{Names: []string{"update"}, Usage: []string{"update [NAME...] [--project | --dir ROOT]"},
-			Help: `      Update the named packages, or every outdated one.
+			{Names: []string{"update"}, Usage: []string{"update [NAME...] [--project | --dir ROOT]"},
+				Help: `      Update the named packages, or every outdated one.
 `, Run: h.packages},
-		{Names: []string{"uninstall"}, Usage: []string{"uninstall NAME [--project | --dir ROOT] [--force]"},
-			Help: `      Remove a package; --force even when an installed package needs it.
+			{Names: []string{"uninstall"}, Usage: []string{"uninstall NAME [--project | --dir ROOT] [--force]"},
+				Help: `      Remove a package; --force even when an installed package needs it.
 `, Run: h.packages},
+		}},
 		{Names: []string{"dirs"}, Usage: []string{"dirs"},
 			Help: `      List the command folders read here, in order (later ones win on a name clash).
 `, Run: func(_ string, args []string, stdout io.Writer) error {

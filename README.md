@@ -8,14 +8,16 @@ gdsh 'ls res://addons'
 gdsh 'for f in $(ls res://) { echo "file: $f" }'
 gdsh 'ls res://' | grep '/$'
 gdsh -f script.gdsh
-gdsh install terrain3d        # a reviewed command package, into ~/.gdsh/packages
-gdsh new tools bake           # a command script, in ~/.gdsh/commands
+gdsh package install terrain3d  # a reviewed command package, into ~/.gdsh/packages
+gdsh new tools bake             # a command script, in ~/.gdsh/commands
 ```
 
 The line is gdsh syntax, the same as in the Editor Console, not your shell's: quote it so your shell
-passes it whole. A first word that is one of gdsh's own commands (`new`, `search`, `install`, `packages`,
-`update`, `uninstall`, `dirs`, `register`, `self-update`) runs that command; `gdsh -c '<line>'` always
-runs a line. See `gdsh --help`.
+passes it whole. A first word that is one of gdsh's own commands (`new`, `package`, `dirs`, `register`,
+`update`) runs that command; `gdsh -c '<line>'` always runs a line. See `gdsh --help`.
+
+`gdsh package` groups the package commands: `search`, `install`, `list`, `update` and `uninstall`.
+`gdsh update` updates gdsh itself.
 
 ## Install
 
@@ -28,7 +30,7 @@ irm https://raw.githubusercontent.com/brohd11/godot-gdsh-cli/main/install.ps1 | 
 ```
 
 The installer puts `gdsh` in `~/.local/bin` (Windows: `%LOCALAPPDATA%\bin`) and registers the Godot
-binaries it finds. `gdsh register <path to godot>` adds others, and `gdsh self-update` updates it.
+binaries it finds. `gdsh register <path to godot>` adds others, and `gdsh update` updates it.
 `$GDSH_HOME` replaces `~/.gdsh`.
 
 ## How it runs
@@ -46,7 +48,7 @@ binaries it finds. `gdsh register <path to godot>` adds others, and `gdsh self-u
 
 | Package    | What                                                                                      |
 |------------|-------------------------------------------------------------------------------------------|
-| `.`        | the `gdsh` binary: line running, Godot lookup, `register`, `self-update`                   |
+| `.`        | the `gdsh` binary: line running, Godot lookup, `register`, `update`                        |
 | `gdshcmd`  | the command-root verbs, shared with `mcp_sh_godot gdsh` through a `Host`                   |
 | `payload`  | the embedded GDScript release; refresh it with `scripts/fetch_payload.sh` (`go generate`)  |
 

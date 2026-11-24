@@ -64,13 +64,27 @@ func TestHelpAndDispatch(t *testing.T) {
 	h.Extra = []Verb{{Names: []string{"add", "remove"}, Usage: []string{"add DIR", "remove DIR"}, Help: "      Edit {prog} folders.\n",
 		Run: func(string, []string, io.Writer) error { return nil }}}
 	out, _, code := run(t, h, "--help")
-	for _, want := range []string{"  gdsh new NAME", "  gdsh dirs\n", "  gdsh add DIR\n  gdsh remove DIR\n", "Edit gdsh folders."} {
+	for _, want := range []string{"  gdsh new NAME", "  gdsh package install NAME...", "  gdsh package list [", "  gdsh dirs\n",
+		"  gdsh add DIR\n  gdsh remove DIR\n", "Edit gdsh folders."} {
 		if code != 0 || !strings.Contains(out, want) {
 			t.Errorf("help missing %q:\n%s", want, out)
 		}
 	}
 	if _, errOut, code := run(t, h, "bogus"); code != 2 || !strings.Contains(errOut, `unknown command "bogus"`) {
 		t.Errorf("unknown: %d %q", code, errOut)
+	}
+	if _, errOut, code := run(t, h, "update"); code != 2 || !strings.Contains(errOut, `unknown command "update"`) {
+		t.Errorf("a top-level update is the program's, not a package verb: %d %q", code, errOut)
+	}
+	// A bare group prints only its own forms.
+	for _, args := range [][]string{{"package"}, {"package", "--help"}} {
+		out, _, code := run(t, h, args...)
+		if code != 0 || !strings.Contains(out, "  gdsh package search [TERM]") || strings.Contains(out, "gdsh new") {
+			t.Errorf("%v: %d %q", args, code, out)
+		}
+	}
+	if _, errOut, code := run(t, h, "package", "bogus"); code != 2 || !strings.Contains(errOut, `unknown package command "bogus"`) {
+		t.Errorf("unknown sub: %d %q", code, errOut)
 	}
 	if _, _, code := run(t, h); code != 2 {
 		t.Errorf("no args: %d", code)
@@ -265,16 +279,16 @@ func TestPackages(t *testing.T) {
 	h := testHost()
 	fakeIndex(t, h)
 
-	out, errOut, code := run(t, h, "search", "3d")
+	out, errOut, code := run(t, h, "package", "search", "3d")
 	if code != 0 || !strings.Contains(out, "terrain3d") || !strings.Contains(out, "needs level") || strings.Contains(out, "utils") ||
-		!strings.Contains(out, "Install with: gdsh install NAME") {
+		!strings.Contains(out, "Install with: gdsh package install NAME") {
 		t.Fatalf("search: %d %q %q", code, out, errOut)
 	}
-	if out, _, _ = run(t, h, "search"); !strings.Contains(out, "project only: gdaddon install o/utils") {
+	if out, _, _ = run(t, h, "package", "search"); !strings.Contains(out, "project only: gdaddon install o/utils") {
 		t.Errorf("search all: %q", out)
 	}
 
-	out, errOut, code = run(t, h, "install", "terrain3d")
+	out, errOut, code = run(t, h, "package", "install", "terrain3d")
 	if code != 0 || !strings.Contains(out, "level is needed by terrain3d") || !strings.Contains(out, "Installed terrain3d v0.1.0") ||
 		!strings.Contains(out, "gdsh lists them on its next run.") {
 		t.Fatalf("install: %d %q %q", code, out, errOut)
@@ -284,38 +298,38 @@ func TestPackages(t *testing.T) {
 			t.Error(err)
 		}
 	}
-	if out, _, _ = run(t, h, "install", "level"); !strings.Contains(out, "level 0.1.0 is already installed") {
+	if out, _, _ = run(t, h, "package", "install", "level"); !strings.Contains(out, "level 0.1.0 is already installed") {
 		t.Errorf("reinstall: %q", out)
 	}
-	if out, _, _ = run(t, h, "packages"); !strings.Contains(out, "level") || !strings.Contains(out, "terrain3d") || strings.Contains(out, "update:") {
+	if out, _, _ = run(t, h, "package", "list"); !strings.Contains(out, "level") || !strings.Contains(out, "terrain3d") || strings.Contains(out, "update:") {
 		t.Errorf("packages: %q", out)
 	}
-	if out, _, _ = run(t, h, "update"); !strings.Contains(out, "pinned version") {
+	if out, _, _ = run(t, h, "package", "update"); !strings.Contains(out, "pinned version") {
 		t.Errorf("update with nothing outdated: %q", out)
 	}
 
 	// An older level shows as outdated and updates.
 	os.WriteFile(filepath.Join(packages, "level", "package.cfg"), []byte("[package]\nversion=\"0.0.9\"\npath=\"x/level\"\n"), 0o644)
-	if out, _, _ = run(t, h, "packages"); !strings.Contains(out, "(update: v0.1.0)") || !strings.Contains(out, "Update with: gdsh update") {
+	if out, _, _ = run(t, h, "package", "list"); !strings.Contains(out, "(update: v0.1.0)") || !strings.Contains(out, "Update with: gdsh package update") {
 		t.Errorf("outdated: %q", out)
 	}
-	if out, _, _ = run(t, h, "update"); !strings.Contains(out, "Updated level v0.1.0") {
+	if out, _, _ = run(t, h, "package", "update"); !strings.Contains(out, "Updated level v0.1.0") {
 		t.Errorf("update: %q", out)
 	}
-	if _, errOut, code = run(t, h, "update", "nope"); code != 1 || !strings.Contains(errOut, "install it with: gdsh install nope") {
+	if _, errOut, code = run(t, h, "package", "update", "nope"); code != 1 || !strings.Contains(errOut, "install it with: gdsh package install nope") {
 		t.Errorf("update missing: %d %q", code, errOut)
 	}
 
-	if _, errOut, code = run(t, h, "uninstall", "level"); code != 1 || !strings.Contains(errOut, "needed by terrain3d") {
+	if _, errOut, code = run(t, h, "package", "uninstall", "level"); code != 1 || !strings.Contains(errOut, "needed by terrain3d") {
 		t.Errorf("uninstall a dependency: %d %q", code, errOut)
 	}
-	if out, _, code = run(t, h, "uninstall", "terrain3d"); code != 0 || !strings.Contains(out, "Removed terrain3d") {
+	if out, _, code = run(t, h, "package", "uninstall", "terrain3d"); code != 0 || !strings.Contains(out, "Removed terrain3d") {
 		t.Errorf("uninstall: %d %q", code, out)
 	}
-	if _, errOut, code = run(t, h, "install", "utils"); code != 1 || !strings.Contains(errOut, "gdaddon install o/utils") {
+	if _, errOut, code = run(t, h, "package", "install", "utils"); code != 1 || !strings.Contains(errOut, "gdaddon install o/utils") {
 		t.Errorf("project-only: %d %q", code, errOut)
 	}
-	for _, args := range [][]string{{"install"}, {"uninstall"}, {"packages", "x"}, {"install", "level", "--bogus"}, {"install", "x", "--project", "--dir", "y"}} {
+	for _, args := range [][]string{{"package", "install"}, {"package", "uninstall"}, {"package", "list", "x"}, {"package", "install", "level", "--bogus"}, {"package", "install", "x", "--project", "--dir", "y"}, {"package", "bogus"}} {
 		if _, _, code = run(t, h, args...); code != 2 {
 			t.Errorf("%v: code %d, want usage 2", args, code)
 		}
@@ -327,7 +341,7 @@ func TestPackagesRoots(t *testing.T) {
 	h := testHost()
 	fakeIndex(t, h)
 
-	if _, errOut, code := run(t, h, "install", "level"); code != 0 {
+	if _, errOut, code := run(t, h, "package", "install", "level"); code != 0 {
 		t.Fatalf("install into ~/.gdsh: %s", errOut)
 	}
 	if _, err := os.Stat(filepath.Join(home, "packages", "level", "package.cfg")); err != nil {
@@ -336,7 +350,7 @@ func TestPackagesRoots(t *testing.T) {
 
 	project := newProject(t)
 	t.Chdir(project)
-	if _, errOut, code := run(t, h, "install", "level", "--project"); code != 0 {
+	if _, errOut, code := run(t, h, "package", "install", "level", "--project"); code != 0 {
 		t.Fatalf("install --project: %s", errOut)
 	}
 	if _, err := os.Stat(filepath.Join(project, ".gdsh", "packages", "level")); err != nil {
@@ -344,14 +358,14 @@ func TestPackagesRoots(t *testing.T) {
 	}
 
 	// A root that isn't read gets the hint instead.
-	out, _, code := run(t, h, "install", "level", "--dir", "elsewhere")
+	out, _, code := run(t, h, "package", "install", "level", "--dir", "elsewhere")
 	if code != 0 || !strings.Contains(out, "doesn't read") {
 		t.Errorf("--dir: %d %q", code, out)
 	}
 
 	// A Root error stops before anything is written.
 	h.Root = func(string) (string, error) { return "", os.ErrPermission }
-	if _, errOut, code := run(t, h, "install", "level"); code != 1 || !strings.Contains(errOut, "permission") {
+	if _, errOut, code := run(t, h, "package", "install", "level"); code != 1 || !strings.Contains(errOut, "permission") {
 		t.Errorf("root error: %d %q", code, errOut)
 	}
 	h.Root = func(string) (string, error) { return "", nil }

@@ -27,7 +27,7 @@ const helpHead = `Usage: gdsh '<line>'                run a gdsh line in the enc
        gdsh -c '<line>'             the same; needed when the line starts with a command below
        gdsh -f <file.gdsh>          run a gdsh script (starts with #!gdsh)
        gdsh register [<godot>...]   record Godot binaries in ~/.gdsh/executables
-       gdsh self-update [--check]   install the latest gdsh release over this binary
+       gdsh update [--check]        install the latest gdsh release over this binary
        gdsh --version | --help
 
 The line is gdsh syntax, as in the Editor Console, not your shell's: quote it so your shell
@@ -79,7 +79,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "register":
 		return register(args[1:], stdout, stderr)
-	case "self-update":
+	case "update":
 		cmd := selfupdate.NewUpdateCommand(updateRepo, "gdsh", version)
 		cmd.SetArgs(args[1:])
 		cmd.SetOut(stdout)

@@ -74,7 +74,7 @@ func (h *Host) packages(sub string, args []string, stdout io.Writer) error {
 			return err
 		}
 		return h.pkgInstall(ctx, a, stdout)
-	case "packages":
+	case "list":
 		a, err := parsePkgArgs(sub, args, pkgArgs{allowRoot: true})
 		if err != nil {
 			return err
@@ -158,7 +158,7 @@ func (h *Host) pkgSearch(ctx context.Context, a pkgArgs, stdout io.Writer) error
 			fmt.Fprintf(stdout, "%-12s %-8s (%s)\n", "", "", strings.Join(notes, "; "))
 		}
 	}
-	fmt.Fprintf(stdout, "\nInstall with: %s install NAME  (into %s)\n", h.Prog, gdshpkg.PackagesDir(root))
+	fmt.Fprintf(stdout, "\nInstall with: %s package install NAME  (into %s)\n", h.Prog, gdshpkg.PackagesDir(root))
 	return nil
 }
 
@@ -217,7 +217,7 @@ func (h *Host) pkgList(ctx context.Context, a pkgArgs, stdout io.Writer) error {
 		return err
 	}
 	if len(installed) == 0 {
-		fmt.Fprintf(stdout, "No packages in %s. Find some with: %s search\n", gdshpkg.PackagesDir(root), h.Prog)
+		fmt.Fprintf(stdout, "No packages in %s. Find some with: %s package search\n", gdshpkg.PackagesDir(root), h.Prog)
 		return nil
 	}
 	idx, idxErr := h.client().FetchIndex(ctx, false)
@@ -243,7 +243,7 @@ func (h *Host) pkgList(ctx context.Context, a pkgArgs, stdout io.Writer) error {
 	if idxErr != nil {
 		fmt.Fprintf(stdout, "(updates unknown: %v)\n", idxErr)
 	} else if len(updates) > 0 {
-		fmt.Fprintf(stdout, "Update with: %s update\n", h.Prog)
+		fmt.Fprintf(stdout, "Update with: %s package update\n", h.Prog)
 	}
 	return nil
 }
@@ -274,7 +274,7 @@ func (h *Host) pkgUpdate(ctx context.Context, a pkgArgs, stdout io.Writer) error
 		have := installedVersions(root)
 		for _, n := range names {
 			if _, ok := have[n]; !ok {
-				return fmt.Errorf("%s is not installed in %s (install it with: %s install %s)", n, root, h.Prog, n)
+				return fmt.Errorf("%s is not installed in %s (install it with: %s package install %s)", n, root, h.Prog, n)
 			}
 		}
 	}

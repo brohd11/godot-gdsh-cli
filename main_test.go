@@ -90,8 +90,13 @@ func TestBannerWriter(t *testing.T) {
 
 func TestDispatch(t *testing.T) {
 	project(t, `"4.4"`)
-	if out, _, code := gdsh(t, "--help"); code != 0 || !strings.Contains(out, "gdsh -c '<line>'") || !strings.Contains(out, "  gdsh install NAME...") {
+	if out, _, code := gdsh(t, "--help"); code != 0 || !strings.Contains(out, "gdsh -c '<line>'") || !strings.Contains(out, "  gdsh package install NAME...") ||
+		!strings.Contains(out, "gdsh update [--check]") {
 		t.Errorf("help: %d %q", code, out)
+	}
+	// update is the binary's own, not the package verb.
+	if out, _, code := gdsh(t, "update", "--help"); code != 0 || !strings.Contains(out, "latest gdsh release") {
+		t.Errorf("update --help: %d %q", code, out)
 	}
 	if out, _, code := gdsh(t, "--version"); code != 0 || !strings.HasPrefix(out, "gdsh dev (gdsh-cli ") {
 		t.Errorf("version: %d %q", code, out)
