@@ -68,22 +68,20 @@ func TestFindGodot(t *testing.T) {
 	}
 }
 
-func TestBannerWriter(t *testing.T) {
-	for in, want := range map[string]string{
-		"Godot Engine v4.4.1 - https://godotengine.org\n\nhello\nworld\n": "hello\nworld\n",
-		"Godot Engine v4.4\r\n\r\nhi\r\n":                                 "hi\r\n",
-		"Godot Engine v4.4\nnot blank\n":                                  "not blank\n",
-		"plain\nGodot Engine v4.4\n":                                      "plain\nGodot Engine v4.4\n",
-		"no newline":                                                      "no newline",
+func TestLoggedErrors(t *testing.T) {
+	exitReport := "Godot Engine v4.7\n\nWARNING: 64 ObjectDB instances were leaked at exit (run with `--verbose` for details).\n" +
+		"   at: cleanup (core/object/object.cpp:2535)\nERROR: 37 resources still in use at exit (run with --verbose for details).\n" +
+		"ERROR: 2 RID allocations of type 'N5Image' were leaked at exit.\n"
+	for log, want := range map[string]bool{
+		"":         false,
+		exitReport: false,
+		exitReport + "SCRIPT ERROR: Parse Error: Preload file \"x.gd\" does not exist.\n": true,
+		"ERROR: GDSh.Load: cannot load command x.gd\n":                                    true,
+		"WARNING: something else\n":                                                       true,
+		"plain text mentioning ERROR: midline\n":                                          false,
 	} {
-		var out bytes.Buffer
-		b := &bannerWriter{w: &out}
-		for i := range in { // byte by byte, as a pipe may split it
-			b.Write([]byte{in[i]})
-		}
-		b.Flush()
-		if out.String() != want {
-			t.Errorf("%q: got %q, want %q", in, out.String(), want)
+		if got := loggedErrors([]byte(log)); got != want {
+			t.Errorf("%q: %v, want %v", log, got, want)
 		}
 	}
 }
@@ -119,7 +117,9 @@ func TestDispatch(t *testing.T) {
 	}
 }
 
-// fakeGodot is a script that prints the banner, its arguments and stdin, and exits with $FAKE_EXIT.
+// fakeGodot is a script that logs like Godot (banner, exit leak report; a script error with
+// $FAKE_ENGINE_ERROR) and, as boot.gd does, writes its arguments to the --result dir's stdout
+// and "oops" to its stderr, unless $FAKE_NORESULT. It exits with $FAKE_EXIT.
 func fakeGodot(t *testing.T) string {
 	t.Helper()
 	if runtime.GOOS == "windows" {
@@ -129,9 +129,15 @@ func fakeGodot(t *testing.T) string {
 	script := `#!/bin/sh
 if [ "$1" = "--version" ]; then echo "4.4.1.stable.mono.official.abc"; exit 0; fi
 printf 'Godot Engine v4.4.1 - https://godotengine.org\n\n'
-for a in "$@"; do echo "arg: $a"; done
-[ -f "$GDSH_HOME/cli/boot.gd" ] && echo "payload: ok"
-echo "oops" >&2
+[ -n "$FAKE_ENGINE_ERROR" ] && echo "SCRIPT ERROR: Parse Error: boom" >&2
+echo "WARNING: 64 ObjectDB instances were leaked at exit (run with --verbose for details)." >&2
+echo "   at: cleanup (core/object/object.cpp:2535)" >&2
+result=""; prev=""
+for a in "$@"; do [ "$prev" = "--result" ] && result=$a; prev=$a; done
+if [ -z "$FAKE_NORESULT" ] && [ -n "$result" ]; then
+	{ for a in "$@"; do echo "arg: $a"; done; [ -f "$GDSH_HOME/cli/boot.gd" ] && echo "payload: ok"; } > "$result/stdout"
+	echo "oops" > "$result/stderr"
+fi
 exit ${FAKE_EXIT:-0}
 `
 	os.WriteFile(path, []byte(script), 0o755)
@@ -143,15 +149,46 @@ func TestRunLine(t *testing.T) {
 	godot := fakeGodot(t)
 	t.Setenv("GODOT", godot)
 
+	// Only the command's output shows; Godot's banner and exit report don't.
 	out, errOut, code := gdsh(t, "echo", "hi")
 	if code != 0 || strings.Contains(out, "Godot Engine") || !strings.Contains(out, "payload: ok") || errOut != "oops\n" {
 		t.Fatalf("run: %d %q %q", code, out, errOut)
 	}
-	for _, want := range []string{"arg: --headless", "arg: --path\narg: " + dir, "arg: " + filepath.Join(home, "cli", "boot.gd"), "arg: --\narg: -c\narg: echo hi\n"} {
+	for _, want := range []string{"arg: --headless", "arg: --path\narg: " + dir, "arg: " + filepath.Join(home, "cli", "boot.gd"),
+		"arg: --\narg: --result\n", "arg: -c\narg: echo hi\n"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)
 		}
 	}
+
+	// --engine-verbose adds Godot's output on stderr; stdout stays the command's.
+	out, errOut, code = gdsh(t, "--engine-verbose", "echo", "hi")
+	if code != 0 || strings.Contains(out, "WARNING") || !strings.Contains(errOut, "Godot Engine v4.4.1") ||
+		!strings.Contains(errOut, "leaked at exit") || !strings.HasSuffix(errOut, "oops\n") {
+		t.Errorf("--engine-verbose: %d %q %q", code, out, errOut)
+	}
+
+	// Without a result, Godot's output is the only explanation, and the run fails.
+	t.Setenv("FAKE_NORESULT", "1")
+	if _, errOut, code = gdsh(t, "echo", "hi"); code != 1 || !strings.Contains(errOut, "Godot Engine") || !strings.Contains(errOut, "leaked at exit") {
+		t.Errorf("no result: %d %q", code, errOut)
+	}
+	t.Setenv("FAKE_NORESULT", "")
+
+	// A failure gets the hint only when Godot logged more than its exit report.
+	t.Setenv("FAKE_EXIT", "3")
+	if _, errOut, code = gdsh(t, "false"); code != 3 || errOut != "oops\n" {
+		t.Errorf("plain failure: %d %q", code, errOut)
+	}
+	t.Setenv("FAKE_ENGINE_ERROR", "1")
+	if _, errOut, code = gdsh(t, "false"); code != 3 || !strings.Contains(errOut, "rerun with --engine-verbose") {
+		t.Errorf("failure with engine errors: %d %q", code, errOut)
+	}
+	t.Setenv("FAKE_EXIT", "")
+	if _, errOut, _ = gdsh(t, "true"); strings.Contains(errOut, "--engine-verbose") {
+		t.Errorf("hint on success: %q", errOut)
+	}
+	t.Setenv("FAKE_ENGINE_ERROR", "")
 	// -c forces a line, even one that starts with a root verb.
 	if out, _, _ = gdsh(t, "-c", "new", "x"); !strings.Contains(out, "arg: -c\narg: new x\n") {
 		t.Errorf("-c: %q", out)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -9,12 +10,13 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 
 	"github.com/brohd11/godot-gdsh-cli/gdshcmd"
 	"github.com/brohd11/godot-gdsh-cli/payload"
 )
 
-func runFile(path string, stdout, stderr io.Writer) int {
+func runFile(path string, engineVerbose bool, stdout, stderr io.Writer) int {
 	abs, err := filepath.Abs(path)
 	if err == nil && !gdshcmd.FileExists(abs) {
 		err = fmt.Errorf("no such file: %s", path)
@@ -23,12 +25,14 @@ func runFile(path string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "gdsh:", err)
 		return 1
 	}
-	return runGdsh([]string{"-f", abs}, stdout, stderr)
+	return runGdsh([]string{"-f", abs}, engineVerbose, stdout, stderr)
 }
 
 // runGdsh runs boot.gd with args (-c LINE or -f FILE) in the enclosing project and returns
-// Godot's exit code.
-func runGdsh(args []string, stdout, stderr io.Writer) int {
+// Godot's exit code. The command's output comes back through --result files, so Godot's own
+// logging (banner, exit leak reports, load errors) is kept apart: shown with engineVerbose,
+// or when boot.gd never wrote a result.
+func runGdsh(args []string, engineVerbose bool, stdout, stderr io.Writer) int {
 	fail := func(err error) int {
 		fmt.Fprintln(stderr, "gdsh:", err)
 		return 1
@@ -49,11 +53,20 @@ func runGdsh(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		return fail(err)
 	}
+	result, err := os.MkdirTemp("", "gdsh-result-")
+	if err != nil {
+		return fail(err)
+	}
+	defer os.RemoveAll(result)
 
-	out := &bannerWriter{w: stdout}
+	var engine bytes.Buffer
 	cmd := exec.Command(godot, append([]string{"--headless", "--path", project, "--script",
-		filepath.Join(cli, "boot.gd"), "--"}, args...)...)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, out, stderr
+		filepath.Join(cli, "boot.gd"), "--", "--result", result}, args...)...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, &engine, &engine
+	if engineVerbose {
+		// Godot's own output goes to stderr, so stdout stays the command's.
+		cmd.Stdout, cmd.Stderr = stderr, stderr
+	}
 
 	// Ctrl-C reaches Godot too; outlive it so its exit code comes back. Notify, not Ignore:
 	// an ignored signal stays ignored in the child.
@@ -62,61 +75,48 @@ func runGdsh(args []string, stdout, stderr io.Writer) int {
 	defer signal.Stop(sig)
 
 	err = cmd.Run()
-	out.Flush()
+	code := 0
 	var exit *exec.ExitError
 	switch {
 	case errors.As(err, &exit):
-		if code := exit.ExitCode(); code > 0 {
-			return code
+		if code = exit.ExitCode(); code <= 0 {
+			code = 1
 		}
-		return 1
 	case err != nil:
 		return fail(fmt.Errorf("running %s: %w", godot, err))
 	}
-	return 0
+
+	out, outErr := os.ReadFile(filepath.Join(result, "stdout"))
+	errText, errErr := os.ReadFile(filepath.Join(result, "stderr"))
+	if outErr != nil || errErr != nil {
+		// boot.gd never got to write: Godot's output is the only explanation.
+		stderr.Write(engine.Bytes())
+		if code == 0 {
+			code = 1
+		}
+		return code
+	}
+	stdout.Write(out)
+	stderr.Write(errText)
+	if code != 0 && !engineVerbose && loggedErrors(engine.Bytes()) {
+		fmt.Fprintln(stderr, "gdsh: Godot logged errors; rerun with --engine-verbose to see them")
+	}
+	return code
 }
 
-// bannerWriter drops Godot's "Godot Engine v…" first line and the blank line after it.
-type bannerWriter struct {
-	w     io.Writer
-	buf   []byte
-	state int // 0: reading line 1, 1: dropping a blank line 2, 2: passing through
-}
-
-func (b *bannerWriter) Write(p []byte) (int, error) {
-	n := len(p)
-	for len(p) > 0 && b.state < 2 {
-		i := bytes.IndexByte(p, '\n')
-		if i < 0 {
-			b.buf = append(b.buf, p...)
-			return n, nil
+// loggedErrors reports whether Godot logged an error or warning other than its exit report of
+// leaked objects and resources, which nearly every run prints.
+func loggedErrors(log []byte) bool {
+	sc := bufio.NewScanner(bytes.NewReader(log))
+	sc.Buffer(nil, 1<<20)
+	for sc.Scan() {
+		line := sc.Text()
+		if !strings.HasPrefix(line, "ERROR:") && !strings.HasPrefix(line, "SCRIPT ERROR:") && !strings.HasPrefix(line, "WARNING:") {
+			continue
 		}
-		line := append(b.buf, p[:i]...)
-		b.buf, p = nil, p[i+1:]
-		switch {
-		case b.state == 0 && bytes.HasPrefix(line, []byte("Godot Engine v")):
-			b.state = 1
-		case b.state == 1 && len(bytes.TrimRight(line, "\r")) == 0:
-			b.state = 2
-		default:
-			b.state = 2
-			if _, err := b.w.Write(append(line, '\n')); err != nil {
-				return n, err
-			}
+		if !strings.Contains(line, "leaked at exit") && !strings.Contains(line, "still in use at exit") {
+			return true
 		}
 	}
-	if len(p) > 0 {
-		if _, err := b.w.Write(p); err != nil {
-			return n, err
-		}
-	}
-	return n, nil
-}
-
-// Flush writes a first line that never got its newline.
-func (b *bannerWriter) Flush() {
-	if len(b.buf) > 0 {
-		b.w.Write(b.buf)
-		b.buf = nil
-	}
+	return false
 }

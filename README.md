@@ -43,6 +43,10 @@ binaries it finds. `gdsh register <path to godot>` adds others, and `gdsh update
 - The GDScript half ([godot-gdsh-lib-cli](https://github.com/brohd11/godot-gdsh-lib-cli)) is embedded in the
   binary and unpacked to `~/.gdsh/cli` whenever it differs. Godot runs `boot.gd` from there, using the
   project's own gdsh when it has one.
+- Only the command's output shows. `boot.gd` writes it to result files, apart from Godot's own logging
+  (banner, the leak report at exit, load errors). `gdsh --engine-verbose …` adds Godot's output on
+  stderr. When a command fails and Godot logged errors, gdsh says so; when `boot.gd` writes no result
+  (a crash, say), Godot's output is printed instead.
 
 ## Layout
 

@@ -30,9 +30,9 @@
 			"package": "",
 			"path": "res://addons/_lib/util_r",
 			"repo_id": "github.com/brohd11/godot-util-r",
-			"sha": "54220c44a302ddfd09d3aa847f9978dca6132b9a",
+			"sha": "b98919f212265a6b9353824b4ee86a50c0454b3a",
 			"source": "remote",
-			"tag": "v0.4.3",
+			"tag": "v0.4.4",
 			"url": "https://github.com/brohd11/godot-util-r",
 			"verify": false
 		}
@@ -44,9 +44,9 @@
 		"package": "",
 		"path": "res://addons/_lib/gdsh_lib/cli",
 		"repo_id": "github.com/brohd11/godot-gdsh-lib-cli",
-		"sha": "e3034a6ae43ca977edeaa03f327c3d7fd06bec51",
+		"sha": "78b3d5a896caa1e1d6051e260a63e39f407761b5",
 		"source": "remote",
-		"tag": "v0.2.0",
+		"tag": "v0.3.0",
 		"url": "https://github.com/brohd11/godot-gdsh-lib-cli",
 		"verify": false
 	},

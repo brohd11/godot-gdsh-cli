@@ -26,6 +26,8 @@ const usage = `Usage: gdsh '<line>' | gdsh -c '<line>' | gdsh -f <file.gdsh> | g
 const helpHead = `Usage: gdsh '<line>'                run a gdsh line in the enclosing Godot project
        gdsh -c '<line>'             the same; needed when the line starts with a command below
        gdsh -f <file.gdsh>          run a gdsh script (starts with #!gdsh)
+       gdsh --engine-verbose ...    also show Godot's own output (banner, exit leak reports,
+                                    load errors) on stderr; by default only the command's shows
        gdsh register [<godot>...]   record Godot binaries in ~/.gdsh/executables
        gdsh update [--check]        install the latest gdsh release over this binary
        gdsh --version | --help
@@ -66,6 +68,10 @@ func main() {
 
 func run(args []string, stdout, stderr io.Writer) int {
 	host := cliHost()
+	engineVerbose := len(args) > 0 && args[0] == "--engine-verbose"
+	if engineVerbose {
+		args = args[1:]
+	}
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, usage)
 		return 1
@@ -93,13 +99,13 @@ func run(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintln(stderr, "gdsh: -c needs a line")
 			return 1
 		}
-		return runGdsh([]string{"-c", strings.Join(args[1:], " ")}, stdout, stderr)
+		return runGdsh([]string{"-c", strings.Join(args[1:], " ")}, engineVerbose, stdout, stderr)
 	case "-f":
 		if len(args) != 2 {
 			fmt.Fprintln(stderr, "gdsh: -f takes one file")
 			return 1
 		}
-		return runFile(args[1], stdout, stderr)
+		return runFile(args[1], engineVerbose, stdout, stderr)
 	}
 	if _, ok := host.Find(args[0]); ok {
 		return host.Run(args, stdout, stderr)
@@ -108,5 +114,5 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "gdsh: unknown flag %s\n%s\n", args[0], usage)
 		return 1
 	}
-	return runGdsh([]string{"-c", strings.Join(args, " ")}, stdout, stderr)
+	return runGdsh([]string{"-c", strings.Join(args, " ")}, engineVerbose, stdout, stderr)
 }
