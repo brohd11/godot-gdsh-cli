@@ -13,6 +13,7 @@ const COMMANDS = [
 	preload("./find/find.gd"),
 	preload("./grep/grep.gd"),
 	preload("./head/head.gd"),
+	preload("./home/home.gd"),
 	preload("./ls/ls.gd"),
 	preload("./math/math.gd"),
 	preload("./mkdir/mkdir.gd"),
