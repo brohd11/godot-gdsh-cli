@@ -6,6 +6,10 @@ extends RefCounted
 const DATA = preload("./data/data.gd")
 
 const COMMANDS = [
+	preload("./data/config_file/config_file.gd"),
+	preload("./data/config_file/check/check.gd"),
+	preload("./data/config_file/get/get.gd"),
+	preload("./data/config_file/set/set.gd"),
 	preload("./data/to_bin/to_bin.gd"),
 	preload("./data/to_json/to_json.gd"),
 	preload("./data/to_yaml/to_yaml.gd"),
