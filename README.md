@@ -10,14 +10,20 @@ gdsh 'ls res://' | grep '/$'
 gdsh -f script.gdsh
 gdsh package install terrain3d  # a reviewed command package, into ~/.gdsh/packages
 gdsh new tools bake             # a command script, in ~/.gdsh/commands
+gdsh editor                     # open the project in its Godot editor
+gdsh run res://main.tscn        # run the project (or a scene) in its Godot
 ```
 
 The line is gdsh syntax, the same as in the Editor Console, not your shell's: quote it so your shell
-passes it whole. A first word that is one of gdsh's own commands (`new`, `package`, `dirs`, `register`,
-`update`) runs that command; `gdsh -c '<line>'` always runs a line. See `gdsh --help`.
+passes it whole. A first word that is one of gdsh's own commands (`new`, `package`, `dirs`, `editor`, `run`,
+`register`, `update`) runs that command; `gdsh -c '<line>'` always runs a line. See `gdsh --help`.
 
 `gdsh package` groups the package commands: `search`, `install`, `list`, `update` and `uninstall`.
 `gdsh update` updates gdsh itself.
+
+`gdsh editor` and `gdsh run` start the project's Godot (picked as below) with `--path <project>`, from
+any folder inside it. `editor` returns at once; `run` stays in the foreground with Godot's output, and
+Ctrl-C stops it. A scene and other Godot flags pass through: `gdsh run res://level.tscn --debug-collisions`.
 
 ## Install
 

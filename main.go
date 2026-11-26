@@ -28,6 +28,10 @@ const helpHead = `Usage: gdsh '<line>'                run a gdsh line in the enc
        gdsh -f <file.gdsh>          run a gdsh script (starts with #!gdsh)
        gdsh --engine-verbose ...    also show Godot's own output (banner, exit leak reports,
                                     load errors) on stderr; by default only the command's shows
+       gdsh editor [<godot args>...]
+                                    open the project in its Godot editor (returns at once)
+       gdsh run [<scene>] [<godot args>...]
+                                    run the project, or a scene, in its Godot; Ctrl-C stops it
        gdsh register [<godot>...]   record Godot binaries in ~/.gdsh/executables
        gdsh update [--check]        install the latest gdsh release over this binary
        gdsh --version | --help
@@ -85,6 +89,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "register":
 		return register(args[1:], stdout, stderr)
+	case "editor":
+		return editorCmd(args[1:], stdout, stderr)
+	case "run":
+		return runCmd(args[1:], stdout, stderr)
 	case "update":
 		cmd := selfupdate.NewUpdateCommand(updateRepo, "gdsh", version)
 		cmd.SetArgs(args[1:])

@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func gdsh(t *testing.T, args ...string) (string, string, int) {
@@ -216,5 +217,80 @@ func TestRegister(t *testing.T) {
 	}
 	if _, errOut, code = gdsh(t, "register", filepath.Join(home, "missing")); code != 1 || !strings.Contains(errOut, "--version failed") {
 		t.Errorf("missing bin: %d %q", code, errOut)
+	}
+}
+
+// fakeLauncher is a script that writes its arguments to $FAKE_ARGS (after $FAKE_SLEEP seconds),
+// prints "game output" and exits with $FAKE_EXIT.
+func fakeLauncher(t *testing.T) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("needs sh")
+	}
+	path := filepath.Join(t.TempDir(), "godot")
+	script := `#!/bin/sh
+[ -n "$FAKE_SLEEP" ] && sleep "$FAKE_SLEEP"
+for a in "$@"; do echo "$a"; done > "$FAKE_ARGS.tmp" && mv "$FAKE_ARGS.tmp" "$FAKE_ARGS"
+echo "game output"
+exit ${FAKE_EXIT:-0}
+`
+	os.WriteFile(path, []byte(script), 0o755)
+	return path
+}
+
+func TestEditorAndRun(t *testing.T) {
+	dir, _ := project(t, `"4.4"`)
+	for _, verb := range []string{"editor", "run"} {
+		if out, _, code := gdsh(t, verb, "--help"); code != 0 || !strings.Contains(out, "gdsh "+verb) {
+			t.Errorf("%s --help: %d %q", verb, code, out)
+		}
+		// No Godot registered for the project.
+		if _, errOut, code := gdsh(t, verb); code != 1 || !strings.Contains(errOut, "gdsh register") {
+			t.Errorf("%s without Godot: %d %q", verb, code, errOut)
+		}
+	}
+
+	t.Setenv("GODOT", fakeLauncher(t))
+	argsFile := filepath.Join(t.TempDir(), "args")
+	t.Setenv("FAKE_ARGS", argsFile)
+	os.MkdirAll(filepath.Join(dir, "sub", "deeper"), 0o755)
+	t.Chdir(filepath.Join(dir, "sub", "deeper"))
+
+	// run waits, shares the terminal and passes the scene and flags through.
+	t.Setenv("FAKE_EXIT", "4")
+	out, _, code := gdsh(t, "run", "res://a.tscn", "--x")
+	if code != 4 || out != "game output\n" {
+		t.Errorf("run: %d %q", code, out)
+	}
+	if data, _ := os.ReadFile(argsFile); string(data) != "--path\n"+dir+"\nres://a.tscn\n--x\n" {
+		t.Errorf("run args: %q", data)
+	}
+	t.Setenv("FAKE_EXIT", "")
+	os.Remove(argsFile)
+
+	// editor returns before Godot finishes.
+	t.Setenv("FAKE_SLEEP", "1")
+	out, _, code = gdsh(t, "editor")
+	if code != 0 || !strings.HasPrefix(out, "Opened "+dir) {
+		t.Errorf("editor: %d %q", code, out)
+	}
+	if _, err := os.Stat(argsFile); err == nil {
+		t.Error("editor waited for Godot")
+	}
+	var data []byte
+	for range 50 {
+		if data, _ = os.ReadFile(argsFile); data != nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if string(data) != "--path\n"+dir+"\n--editor\n" {
+		t.Errorf("editor args: %q", data)
+	}
+
+	// Outside a project.
+	t.Chdir(t.TempDir())
+	if _, errOut, code := gdsh(t, "run"); code != 1 || !strings.Contains(errOut, "no project.godot") {
+		t.Errorf("run outside a project: %d %q", code, errOut)
 	}
 }
