@@ -51,8 +51,8 @@ Commands for the roots gdsh reads:
 const helpTail = `
 gdsh reads its builtins, the utils library, enabled plugins' cmd/ folders, and two roots:
 ~/.gdsh ($GDSH_HOME) and <project>/.gdsh. Each root gives its commands/ folder and every
-packages/<name>/cmd. The project's own gdsh runs when it has one (addons/_lib/gdsh), else the
-copy bundled in ~/.gdsh/cli.
+packages/<name>/cmd. gdsh runs the copy bundled in ~/.gdsh/cli and rebuilds the project's
+commands against it; set GDSH_PROJECT to run the project's own (addons/_lib/gdsh) instead.
 `
 
 // cliHost is gdsh's own roots, which it reads with no config.
