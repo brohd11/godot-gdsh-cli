@@ -1,4 +1,6 @@
-extends "../../../../src/config_command.gd"
+extends "../../../../../../gdsh/src/core/command_base.gd"
+
+const ConfigData = preload("../../../../src/config_data.gd")
 
 const _HELP = \
 "Print a ConfigFile as Godot parses it: the whole file, a section's key=value lines, or one value
@@ -28,9 +30,13 @@ func _process_flag(flag:String):
 	if flag == "--json":
 		json_flag = true
 
+func _get_completions(completion:Completion):
+	var keys = ConfigData.key_completions(self)
+	return keys if keys != null else super(completion)
+
 func _execute(ctx:Context):
 	var path = complete_path(positional_args[0])
-	var loaded = _load_cfg(path)
+	var loaded = ConfigData.load_cfg(self, path)
 	if loaded.has("error"):
 		ctx.append_error(loaded.error)
 		return ExitCode.FAIL

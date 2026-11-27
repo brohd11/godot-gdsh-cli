@@ -5,6 +5,5 @@ extends RefCounted
 
 const COMMANDS = [
 	preload("./test/test.gd"),
-	preload("./gdtest/gdtest.gd"),
 ]
 

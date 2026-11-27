@@ -7,6 +7,7 @@ const Undo = preload("./undo.gd")
 const Utils = preload("./utils.gd")
 const NodePaths = preload("./node_paths.gd")
 const Cancel = preload("./cancel.gd")
+const FileSystem = preload("./filesystem.gd")
 const _Anchor = preload("./anchor.gd")
 const ExitCode = Types.ExitCode
 static var _clean_output_regex:RegEx
@@ -95,7 +96,8 @@ func load(path:String, hidden:=false) -> Dictionary:
 	if resolved.get_extension().to_lower() == "gd":
 		var script = loader.load_command(resolved)
 		if script != null:
-			loaded[script.get_command_name()] = {Types.ScopeDataKeys.SCRIPT: script}
+			for name in [script.get_command_name()] + Array(script.get_command_aliases()):
+				loaded[name] = {Types.ScopeDataKeys.SCRIPT: script}
 	else:
 		loaded = loader.load_directory(resolved)
 	var target = scopes_hidden if hidden else scopes
@@ -113,6 +115,31 @@ func load_package(path:String, hidden:=false) -> Dictionary:
 		push_error("GDSh.Context: package has no cmd/ dir: " + resolved)
 		return {}
 	return self.load(resolved.path_join("cmd"), hidden)
+
+
+## A bound provider never falls back to physical files, including when it fails.
+func has_filesystem() -> bool:
+	return FileSystem.bound(self)
+
+
+func resolve_path(path:String) -> Dictionary:
+	return FileSystem.resolve(self, path)
+
+
+func stat_path(path:String) -> Dictionary:
+	return FileSystem.operation(self, "stat", path)
+
+
+func list_directory(path:String) -> Dictionary:
+	return FileSystem.operation(self, "list_dir", path)
+
+
+func read_file(path:String) -> Dictionary:
+	return FileSystem.operation(self, "read_text", path)
+
+
+func walk_directory(path:String) -> Dictionary:
+	return FileSystem.walk(self, path)
 
 
 func has_scope(name:String) -> bool:
