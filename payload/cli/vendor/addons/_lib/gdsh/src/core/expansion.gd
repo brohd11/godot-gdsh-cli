@@ -29,6 +29,7 @@ static func word_values(word:Dictionary, ctx:Context, completion:=false, scalar:
 					value = "$(" + part.value + ")"
 				else:
 					var child = Context.new_ctx("Substitution", ctx, true)
+					# Untagged on purpose: substitution only runs under a shell, and GDSh.Host ships execute.gd.
 					var engine = load(_Anchor.path("src/core/execute.gd"))
 					# Expansion is synchronous; the engine fails the command if the body pauses.
 					if not engine.run_substitution(child, part.get("tree", {}), part.value):

@@ -18,9 +18,9 @@
 			"package": "",
 			"path": "res://addons/_lib/gdsh",
 			"repo_id": "github.com/brohd11/godot-gdsh",
-			"sha": "356202c5afe9ab9298013973d4e7c33a97ca14b9",
+			"sha": "30d8c2673eb9a01afbd8c26a3d48972ce144f603",
 			"source": "remote",
-			"tag": "v0.5.6",
+			"tag": "v0.5.8",
 			"url": "https://github.com/brohd11/godot-gdsh",
 			"verify": false
 		},
@@ -116,9 +116,9 @@
 		"package": "",
 		"path": "res://addons/_lib/gdsh_lib/cli",
 		"repo_id": "github.com/brohd11/godot-gdsh-lib-cli",
-		"sha": "bb1d28b3283e57744e084707f1a474c025645bc7",
+		"sha": "aed8bee77401a1357527a35c00950b22052d63f1",
 		"source": "remote",
-		"tag": "v0.4.5",
+		"tag": "v0.4.6",
 		"url": "https://github.com/brohd11/godot-gdsh-lib-cli",
 		"verify": false
 	},

@@ -9,6 +9,11 @@ const NodePaths = preload("./node_paths.gd")
 const Cancel = preload("./cancel.gd")
 const FileSystem = preload("./filesystem.gd")
 const _Anchor = preload("./anchor.gd")
+
+## Gathers the lazily loaded tokenizer into exports; _Anchor.path() hides it from the scan.
+## execute.gd stays untagged: GDSh.Host ships it, so command-only exports don't carry the shell.
+const _TOKENIZER_PATH = "./tokenizer.gd" #! gdp-dependency
+
 const ExitCode = Types.ExitCode
 static var _clean_output_regex:RegEx
 
